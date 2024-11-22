@@ -1,0 +1,83 @@
+import sqlite3
+
+# Создание подключения к базе данных
+conn = sqlite3.connect('example.db')
+
+# Создание курсора
+c = conn.cursor()
+
+# Создание таблицы пользователей
+c.execute('''
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+''')
+
+# Создание таблицы записей
+c.execute('''
+CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+''')
+
+# Функция для добавления пользователя
+def add_user(username, email):
+    try:
+        c.execute('INSERT INTO users (username, email) VALUES (?, ?)', (username, email))
+        conn.commit()
+        print(f"Пользователь {username} добавлен.")
+    except sqlite3.IntegrityError:
+        print(f"Ошибка: пользователь с email {email} уже существует.")
+
+# Функция для добавления записи
+def add_post(user_id, title, content):
+    c.execute('INSERT INTO posts (user_id, title, content) VALUES (?, ?, ?)', (user_id, title, content))
+    conn.commit()
+    print(f"Запись '{title}' добавлена для пользователя с ID {user_id}.")
+
+# Функция для получения всех пользователей
+def get_users():
+    c.execute('SELECT * FROM users')
+    return c.fetchall()
+
+# Функция для получения всех записей пользователя
+def get_user_posts(user_id):
+    c.execute('SELECT * FROM posts WHERE user_id = ?', (user_id,))
+    return c.fetchall()
+
+# Функция для обновления email пользователя
+def update_user_email(user_id, new_email):
+    c.execute('UPDATE users SET email = ? WHERE id = ?', (new_email, user_id))
+    conn.commit()
+    print(f"Email пользователя с ID {user_id} обновлен на {new_email}.")
+
+# Пример использования функций
+add_user('john_doe', 'john@example.com')
+add_user('jane_doe', 'jane@example.com')
+
+users = get_users()
+print("Пользователи:")
+for user in users:
+    print(user)
+
+add_post(1, 'Первый пост', 'Это контент первого поста.')
+add_post(1, 'Второй пост', 'Это контент второго поста.')
+add_post(2, 'Первый пост Джейн', 'Это контент первого поста Джейн.')
+
+print("\nЗаписи пользователя с ID 1:")
+posts = get_user_posts(1)
+for post in posts:
+    print(post)
+
+update_user_email(1, 'john_doe_updated@example.com')
+
+# Закрытие соединения с базой данных
+conn.close()
